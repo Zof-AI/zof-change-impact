@@ -2,7 +2,26 @@
 
 Local static change-impact analysis for TypeScript, JavaScript and Python. It identifies changed files, conventional import edges, transitive consumers and likely affected tests. It never executes analyzed source, sends telemetry, uploads code or contacts hosted services.
 
-This is an unreleased candidate. Registry namespace, repository URLs and Apache-2.0 licensing require owner approval. The links in package metadata are intended release locations; they do not establish publication.
+Version 0.1.0 is prepared under the Apache-2.0 license. Use the GitHub source installation below; npm registry publication is not claimed.
+
+<!-- ZOF_RELEASE_INSTALL_START -->
+## Install from GitHub source
+
+Requires Node.js 22 or 24, npm, and Git. Filesystem operations require Linux or macOS with Python 3.10 or newer; Windows file operations fail closed. Clone this repository and explicitly prepare its reviewed release dependencies:
+
+```sh
+git clone https://github.com/Zof-AI/zof-change-impact.git
+cd zof-change-impact
+node scripts/bootstrap.mjs --allow-network
+npm ci --ignore-scripts --prefer-offline
+npm run build
+npm test
+```
+
+The bootstrap downloads only the exact `v0.1.0` dependency assets from [GitHub Releases](https://github.com/Zof-AI/zof-change-impact/releases), as listed in `scripts/release-dependencies.json`, verifies SHA256 and byte size, and adds them to the npm cache. It does not extract archives, run package scripts, collect application data, or send credentials. Downloads require the explicit flag and follow only HTTPS GitHub asset redirects. Installation then fetches ordinary third-party dependencies from npm. Use a writable npm cache; set `npm_config_cache` consistently for both commands if needed. An unavailable asset, changed hash, or oversized response stops installation.
+
+GitHub source and release artifacts are the initial distribution channel. These instructions do not claim that `@zof-ai` packages are published on npm or that the VS Code extension is listed in Marketplace.
+<!-- ZOF_RELEASE_INSTALL_END -->
 
 ## Start locally
 
@@ -14,7 +33,7 @@ npm run build
 node dist/cli.js --root examples/javascript --changed src/math.ts --json
 ```
 
-The JavaScript example reports `src/math.ts`, `src/checkout.ts` and `tests/checkout.test.ts`. After an approved registry release, the executable name will be `zof-change-impact` and the candidate install command is `npm install --save-dev @zof-ai/change-impact`. Publication has not occurred.
+The JavaScript example reports `src/math.ts`, `src/checkout.ts` and `tests/checkout.test.ts`. The built executable is `zof-change-impact`; use the source installation above. npm registry publication remains separate from GitHub distribution.
 
 ## Three examples
 
@@ -51,7 +70,7 @@ TypeScript's public AST recognizes static imports, re-exports, literal `require`
 
 Default exclusions include `.git`, `node_modules`, `.venv`, `venv`, `dist`, `build` and `__pycache__`. Repeat `--exclude GLOB` for directory-prefix patterns supporting `*`, `?` and `**`. An excluded changed path triggers an incomplete report. Programmatic limits default to 5,000 files, 1 MiB per source, 32 MiB total source, 8 MiB Git diff output and depth 32; configured limits have hard ceilings. Python lexical lines have a fixed 8,192-character ceiling checked before pattern matching. An oversized line stops analysis of that file and produces `PYTHON_IMPORT_SIZE_LIMIT`, `complete: false` and a full-suite fallback warning. Git subprocesses time out after 15 seconds. XML and archives are never parsed; external artifact URLs are never fetched.
 
-Escaping, absolute, control-character and Windows-style relative inputs are rejected. Symlinks and special files are not read. Errors and reports omit source snippets, raw logs, arbitrary environment values and Git stderr. Recognizable credentials and URL metadata are redacted. Redaction cannot identify every arbitrary secret; do not put secrets in paths or symbols. Operate on a stable checkout: filesystem changes by another process during a scan are outside this local tool's isolation boundary.
+Escaping, absolute, control-character and Windows-style relative inputs are rejected. Symlinks and special files are not read. Errors and reports omit source snippets, raw logs, arbitrary environment values and Git stderr. Recognizable credentials and URL metadata are redacted. Redaction cannot identify every arbitrary secret; do not put secrets in paths or symbols. Reads are anchored to directory descriptors. File contents can still change during capture, so reports are not atomic snapshots.
 
 Unresolved imports, package aliases, computed imports, syntax errors, removed/renamed sources, unsupported changed files, resource limits and Python lexical analysis trigger `complete: false`. Package resolution supports conventional source extensions/index files; TypeScript path aliases, custom bundler loaders, Python search-path mutation, reflection, frameworks, runtime registries and implicit framework dependencies require a full-suite fallback. Declared npm packages and `node:` built-ins are external edges. Changes to configuration or dependency manifests are conservatively incomplete.
 
@@ -64,4 +83,8 @@ npm test
 npm pack --ignore-scripts
 ```
 
-Tests include a real synthetic Git history, shared-function impact, cycles, Python dependencies, ambiguous imports, malicious paths, symlinks, bounds, redaction, and disabled Git helpers. Cross-platform CI is configured, but platform support is verified only by completed runs. See [security guidance](SECURITY.md) and [release procedure](docs/RELEASE.md). Release workflows build candidates only. Public release, maintained reporting channels, registry ownership and live installation checks remain external approval gates.
+Tests include a real synthetic Git history, shared-function impact, cycles, Python dependencies, ambiguous imports, malicious paths, symlinks, bounds, redaction, and disabled Git helpers. Cross-platform CI is configured, but platform support is verified only by completed runs. See [security guidance](SECURITY.md) and [release procedure](docs/RELEASE.md). Release workflows build candidates only. GitHub Releases carry versioned artifacts; npm registry ownership and registry installation remain separate from source distribution.
+
+## Filesystem and Git boundaries
+
+Filesystem operations use bounded, directory-relative descriptors on Linux/macOS with Python 3.10 or newer. Symlinks, hard-linked inputs, special files and traversal are rejected. Open descriptors remain attached to the original directory when names change. File contents can still change during a read or snapshot; this is not an atomic filesystem snapshot. Windows filesystem operations fail closed; in-memory JSON validation and analysis do not require the file helper. Git reads use a private bounded snapshot: 256 MiB total, 32 MiB per source/object file, 50,000 entries and 64 directory levels. Repository hooks/configuration are not used; local `.git/info/exclude` and `.git/info/attributes` are preserved. External Git metadata, object alternates, grafts, sparse-checkout metadata, linked worktrees and submodules are unsupported. Limits and unsupported metadata cause an explicit error or incomplete result.

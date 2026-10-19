@@ -1,11 +1,10 @@
 import ts from 'typescript';
 import path from 'node:path';
-import { lstat, opendir, realpath } from 'node:fs/promises';
 import { parseDiff } from './diff.js';
 import { git, revision, untracked } from './git.js';
 import { boundedRead, redact, safePath } from './security.js';
 import type { AnalyzeOptions, ChangedSymbol, DiffChange, ImpactReport, Limitation } from './types.js';
-import { redact as redactValue } from '@zof-ai/evidence-spec';
+import { safeListDirectory, redact as redactValue } from '@zof-ai/evidence-spec';
 const source = /\.(?:[cm]?[jt]sx?|py)$/i;
 const maxPythonLineCharacters = 8192;
 export const isTestFile = (file: string): boolean => /(?:^|\/)(?:__tests__|tests?|specs?)(?:\/|$)|(?:^|\/)(?:test_[^/]+\.py|[^/]+_test\.py)$|\.(?:test|spec)\.[cm]?[jt]sx?$/i.test(file);
@@ -40,8 +39,8 @@ const unique = (values: string[]): string[] => [...new Set(values)].sort();
 
 export async function analyzeImpact(options: AnalyzeOptions): Promise<ImpactReport> {
   if (!options || typeof options.root !== 'string') throw new Error('A repository root is required');
-  const root = await realpath(options.root).catch(() => { throw new Error('Repository root is not accessible'); });
-  if (!(await lstat(root)).isDirectory()) throw new Error('Repository root must be a directory');
+  const root = path.resolve(options.root);
+  await safeListDirectory(root, '', 1);
   const maxFiles = bound(options.limits?.maxFiles, 5000, 20000);
   const maxFileBytes = bound(options.limits?.maxFileBytes, 1024 * 1024, 4 * 1024 * 1024);
   const maxTotalBytes = bound(options.limits?.maxTotalBytes, 32 * 1024 * 1024, 128 * 1024 * 1024);
@@ -59,7 +58,7 @@ export async function analyzeImpact(options: AnalyzeOptions): Promise<ImpactRepo
     changes = unique(options.changedFiles.map(safePath)).map(file => ({ path:file,status:'modified',addedLines:0,deletedLines:0,ranges:[] }));
     limit('EXPLICIT_FILES', 'Line changes and changed symbols are unavailable for an explicit file list.');
   } else {
-    const discoveredRoot = await realpath((await git(root, ['rev-parse','--show-toplevel'], 8192)).trim());
+    const discoveredRoot = (await git(root, ['rev-parse','--show-toplevel'], 8192)).trim();
     if (discoveredRoot !== root) throw new Error('Git repository root must equal the approved workspace');
     if (options.head && !options.base) throw new Error('A base revision is required when head is provided');
     const base = await revision(root, options.base ?? 'HEAD');
@@ -79,18 +78,19 @@ export async function analyzeImpact(options: AnalyzeOptions): Promise<ImpactRepo
   async function walk(directory: string, prefix: string, depth: number): Promise<void> {
     if (depth > maxDepth) { limit('DEPTH_LIMIT','Directory traversal depth limit reached.'); return; }
     try {
-      const dir = await opendir(directory);
-      for await (const entry of dir) {
+      const listing = await safeListDirectory(root, prefix, Math.max(1, maxFiles * 4 - examined));
+      for (const entry of listing.entries) {
         if (++examined > maxFiles * 4 || files.length >= maxFiles) { exhausted = true; break; }
         const file = prefix ? `${prefix}/${entry.name}` : entry.name;
         if (excluded(file)) continue;
         try { safePath(file); } catch { limit('UNSAFE_PATH','A filename cannot be represented safely.'); continue; }
-        if (entry.isSymbolicLink()) { limit('SYMLINK','Symbolic links are not followed.',file); continue; }
-        if (entry.isDirectory()) await walk(path.join(directory,entry.name),file,depth + 1);
-        else if (entry.isFile()) files.push(file);
+        if (entry.kind === 'symlink') { limit('SYMLINK','Symbolic links are not followed.',file); continue; }
+        if (entry.kind === 'directory') await walk(path.join(directory,entry.name),file,depth + 1);
+        else if (entry.kind === 'file') files.push(file);
         else limit('SPECIAL_FILE','Special filesystem entries are not read.',file);
         if (exhausted) break;
       }
+      if (listing.truncated) exhausted = true;
     } catch { limit('UNREADABLE_DIRECTORY','A directory could not be inspected.',prefix || undefined); }
   }
   await walk(root,'',0);
