@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2
+
+Document public installation, executable entry points and reproducible packaged examples. Align release dependency pins; runtime behavior is unchanged.
+
 ## 0.1.1
 
 - Replace ambiguous Git diff header matching with deterministic linear scans, preventing excessive CPU use on malformed headers with repeated path separators.

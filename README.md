@@ -2,7 +2,36 @@
 
 Local static change-impact analysis for TypeScript, JavaScript and Python. It identifies changed files, conventional import edges, transitive consumers and likely affected tests. It never executes analyzed source, sends telemetry, uploads code or contacts hosted services.
 
-Version 0.1.1 is prepared under the Apache-2.0 license. Use the GitHub source installation below; npm registry publication is not claimed.
+
+
+<!-- ZOF_NPM_INSTALL_START -->
+## Install from npm
+
+Use Node.js 22 or 24 and npm. File-based operations require Linux or macOS with Python 3.10 or newer; Windows file operations fail closed. In a new project directory, install the version used by this guide:
+
+```sh
+npm install --ignore-scripts --save-exact @zof-ai/change-impact@0.1.2
+npx --no-install zof-change-impact --help
+```
+
+The package includes compiled JavaScript, TypeScript declarations and its runtime dependencies. No source build, Zof account or repository upload is required. `--ignore-scripts` disables installation lifecycle scripts; `--no-install` keeps the example commands from downloading another package.
+
+Confirm the public ESM entry point; this prints `function`:
+
+```sh
+node --input-type=module -e "import('@zof-ai/change-impact').then(api => console.log(typeof api.analyzeImpact))"
+```
+
+Run a packaged example from the same directory:
+
+```sh
+npx --no-install zof-change-impact --root node_modules/@zof-ai/change-impact/examples/javascript --changed src/math.ts --json
+```
+
+The report lists affected files and tests from the packaged static dependency example; it does not execute tests.
+
+Package: [@zof-ai/change-impact](https://www.npmjs.com/package/@zof-ai/change-impact). The source-checkout instructions and three additional workflows follow.
+<!-- ZOF_NPM_INSTALL_END -->
 
 <!-- ZOF_RELEASE_INSTALL_START -->
 ## Install from GitHub source
@@ -10,7 +39,7 @@ Version 0.1.1 is prepared under the Apache-2.0 license. Use the GitHub source in
 Requires Node.js 22 or 24, npm, and Git. Filesystem operations require Linux or macOS with Python 3.10 or newer; Windows file operations fail closed. Clone this repository and explicitly prepare its reviewed release dependencies:
 
 ```sh
-git clone https://github.com/Zof-AI/zof-change-impact.git
+git clone --branch v0.1.2 --depth 1 https://github.com/Zof-AI/zof-change-impact.git
 cd zof-change-impact
 node scripts/bootstrap.mjs --allow-network
 npm ci --ignore-scripts --prefer-offline
@@ -18,9 +47,8 @@ npm run build
 npm test
 ```
 
-The bootstrap downloads only the exact `v0.1.0` dependency assets from [GitHub Releases](https://github.com/Zof-AI/zof-change-impact/releases), as listed in `scripts/release-dependencies.json`, verifies SHA256 and byte size, and adds them to the npm cache. It does not extract archives, run package scripts, collect application data, or send credentials. Downloads require the explicit flag and follow only HTTPS GitHub asset redirects. Installation then fetches ordinary third-party dependencies from npm. Use a writable npm cache; set `npm_config_cache` consistently for both commands if needed. An unavailable asset, changed hash, or oversized response stops installation.
+The bootstrap downloads only the exact versioned dependency assets from [GitHub Releases](https://github.com/Zof-AI/zof-change-impact/releases), as listed in `scripts/release-dependencies.json`, verifies SHA256 and byte size, and adds them to the npm cache. It does not extract archives, run package scripts, collect application data, or send credentials. Downloads require the explicit flag and follow only HTTPS GitHub asset redirects. Installation then fetches ordinary third-party dependencies from npm. Use a writable npm cache; set `npm_config_cache` consistently for both commands if needed. An unavailable asset, changed hash, or oversized response stops installation.
 
-GitHub source and release artifacts are the initial distribution channel. These instructions do not claim that `@zof-ai` packages are published on npm or that the VS Code extension is listed in Marketplace.
 <!-- ZOF_RELEASE_INSTALL_END -->
 
 ## Start locally
