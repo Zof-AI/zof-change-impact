@@ -36,7 +36,7 @@
     "prepack": "npm run build"
   },
   "dependencies": {
-    "typescript": "5.9.3",
+    "typescript": "7.0.2",
     "@zof-ai/evidence-spec": "0.1.1"
   },
   "devDependencies": {
