@@ -5,6 +5,7 @@ import { parseDiff } from './diff.js';
 import { git, revision, untracked } from './git.js';
 import { boundedRead, redact, safePath } from './security.js';
 import type { AnalyzeOptions, ChangedSymbol, DiffChange, ImpactReport, Limitation } from './types.js';
+import { redact as redactValue } from '@zof-ai/evidence-spec';
 const source = /\.(?:[cm]?[jt]sx?|py)$/i;
 export const isTestFile = (file: string): boolean => /(?:^|\/)(?:__tests__|tests?|specs?)(?:\/|$)|(?:^|\/)(?:test_[^/]+\.py|[^/]+_test\.py)$|\.(?:test|spec)\.[cm]?[jt]sx?$/i.test(file);
 function glob(pattern: string): { test: (file: string) => boolean } {
@@ -57,6 +58,8 @@ export async function analyzeImpact(options: AnalyzeOptions): Promise<ImpactRepo
     changes = unique(options.changedFiles.map(safePath)).map(file => ({ path:file,status:'modified',addedLines:0,deletedLines:0,ranges:[] }));
     limit('EXPLICIT_FILES', 'Line changes and changed symbols are unavailable for an explicit file list.');
   } else {
+    const discoveredRoot = await realpath((await git(root, ['rev-parse','--show-toplevel'], 8192)).trim());
+    if (discoveredRoot !== root) throw new Error('Git repository root must equal the approved workspace');
     if (options.head && !options.base) throw new Error('A base revision is required when head is provided');
     const base = await revision(root, options.base ?? 'HEAD');
     const head = options.head ? await revision(root, options.head) : undefined;
@@ -223,8 +226,7 @@ export async function analyzeImpact(options: AnalyzeOptions): Promise<ImpactRepo
   // Lack of line information is advisory, not missing dependency coverage.
   const incomplete = limitations.some(l => l.code !== 'EXPLICIT_FILES');
   const report: ImpactReport = { schemaVersion:'impact/v1',changes:changes.sort((a,b)=>a.path.localeCompare(b.path,'en')),files,dependencies:[...graph].map(([file,imports])=>({file,imports:unique([...imports])})),impactedFiles:unique([...affected]),affectedTests:unique([...affected].filter(isTestFile)),changedSymbols:changedSymbols.sort((a,b)=>a.file.localeCompare(b.file,'en') || a.startLine-b.startLine),confidence:incomplete?'low':(sourceFiles.some(f=>f.endsWith('.py'))?'medium':'high'),complete:!incomplete,limitations };
-  const serialized = JSON.stringify(report);
-  const safe = redact(serialized);
-  if (safe !== serialized) { const redacted = JSON.parse(safe) as ImpactReport; redacted.complete=false; redacted.confidence='low'; redacted.limitations.push({code:'REDACTED_OUTPUT',message:'Sensitive-looking metadata was redacted; use a full-suite fallback.'}); return redacted; }
+  const redacted = redactValue(report);
+  if (JSON.stringify(redacted) !== JSON.stringify(report)) { redacted.complete=false; redacted.confidence='low'; redacted.limitations.push({code:'REDACTED_OUTPUT',message:'Sensitive-looking metadata was redacted; use a full-suite fallback.'}); return redacted; }
   return report;
 }

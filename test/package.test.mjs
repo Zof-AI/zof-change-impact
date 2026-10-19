@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm, writeFile, mkdir } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile, mkdir, access } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -20,7 +20,8 @@ test('packed package installs cleanly, exposes import types and executable, runs
   assert.ok(packed.files.some(f=>f.path==='dist/index.d.ts'));assert.ok(packed.files.some(f=>f.path==='dist/cli.js'));
   assert.ok(packed.files.every(f=>!(/^(?:test|src|\.git|node_modules|orchestration)(?:\/|$)|\.map$|\.env/.test(f.path))));
   const project=join(root,'clean');await mkdir(project);await writeFile(join(project,'package.json'),' {"private":true,"type":"module"} ');
-  execute([process.env.npm_execpath,'install','--ignore-scripts','--no-audit','--no-fund',join(root,packed.filename)],{cwd:project});
+  const candidates=[];const evidence=resolve('../../orchestration/artifacts/zof-ai-evidence-spec-0.1.0.tgz');try{await access(evidence);candidates.push(evidence);}catch{}
+  execute([process.env.npm_execpath,'install','--ignore-scripts','--no-audit','--no-fund',...candidates,join(root,packed.filename)],{cwd:project});
   const pkg=JSON.parse(await readFile(join(project,'node_modules/@zof-ai/change-impact/package.json'),'utf8'));assert.equal(pkg.bin['zof-change-impact'],'./dist/cli.js');
   const result=execute(['--input-type=module','-e',"import {analyzeImpact} from '@zof-ai/change-impact'; const r=await analyzeImpact({root:'node_modules/@zof-ai/change-impact/examples/javascript',changedFiles:['src/math.ts']}); console.log(JSON.stringify(r));"],{cwd:project});
   assert.deepEqual(JSON.parse(result).affectedTests,['tests/checkout.test.ts']);

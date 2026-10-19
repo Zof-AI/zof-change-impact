@@ -25,7 +25,9 @@
     "LICENSE",
     "SECURITY.md",
     "examples",
-    "docs"
+    "docs",
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -34,7 +36,8 @@
     "prepack": "npm run build"
   },
   "dependencies": {
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "@zof-ai/evidence-spec": "0.1.0"
   },
   "devDependencies": {
     "@types/node": "22.19.0"
