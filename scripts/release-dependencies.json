@@ -3,12 +3,12 @@
   "release": "v0.1.0",
   "dependencies": [
     {
-      "packageName": "@zofai/evidence-spec",
+      "packageName": "@zof-ai/evidence-spec",
       "version": "0.1.0",
       "repository": "zof-evidence-spec",
-      "artifact": "zofai-evidence-spec-0.1.0.tgz",
-      "url": "https://github.com/Zof-AI/zof-evidence-spec/releases/download/v0.1.0/zofai-evidence-spec-0.1.0.tgz",
-      "sha256": "94dffbef977c91f19828200631d889c19bc28aff1fdefcd2b907cb3a1bc9265f",
+      "artifact": "zof-ai-evidence-spec-0.1.0.tgz",
+      "url": "https://github.com/Zof-AI/zof-evidence-spec/releases/download/v0.1.0/zof-ai-evidence-spec-0.1.0.tgz",
+      "sha256": "d3d83c1335b801d155d17d3dc3cafd777a55f986d7a9f6023d90513970245ba5",
       "sizeBytes": 25239
     }
   ]

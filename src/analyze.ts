@@ -4,7 +4,7 @@ import { parseDiff } from './diff.js';
 import { git, revision, untracked } from './git.js';
 import { boundedRead, redact, safePath } from './security.js';
 import type { AnalyzeOptions, ChangedSymbol, DiffChange, ImpactReport, Limitation } from './types.js';
-import { safeListDirectory, redact as redactValue } from '@zofai/evidence-spec';
+import { safeListDirectory, redact as redactValue } from '@zof-ai/evidence-spec';
 const source = /\.(?:[cm]?[jt]sx?|py)$/i;
 const maxPythonLineCharacters = 8192;
 export const isTestFile = (file: string): boolean => /(?:^|\/)(?:__tests__|tests?|specs?)(?:\/|$)|(?:^|\/)(?:test_[^/]+\.py|[^/]+_test\.py)$|\.(?:test|spec)\.[cm]?[jt]sx?$/i.test(file);

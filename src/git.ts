@@ -1,4 +1,4 @@
-import { safeGit } from '@zofai/evidence-spec';
+import { safeGit } from '@zof-ai/evidence-spec';
 import { safePath } from './security.js';
 export async function git(root: string, args: string[], maxBuffer = 16 * 1024 * 1024): Promise<string> {
   try { return await safeGit(root, args, maxBuffer); }
