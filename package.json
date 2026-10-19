@@ -1,5 +1,5 @@
 {
-  "name": "@zof-ai/change-impact",
+  "name": "@zofai/change-impact",
   "version": "0.1.0",
   "description": "Explainable offline static change-impact analysis for JavaScript, TypeScript and Python",
   "type": "module",
@@ -37,7 +37,7 @@
   },
   "dependencies": {
     "typescript": "5.9.3",
-    "@zof-ai/evidence-spec": "0.1.0"
+    "@zofai/evidence-spec": "0.1.0"
   },
   "devDependencies": {
     "@types/node": "22.19.0"
