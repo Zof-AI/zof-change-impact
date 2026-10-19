@@ -1,0 +1,1 @@
+"""Synthetic local import example."""
