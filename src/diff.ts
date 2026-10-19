@@ -1,6 +1,50 @@
 import type { DiffChange } from './types.js';
 import { safePath } from './security.js';
 
+// Two 4,096-character paths still fit when every UTF-8 byte uses a Git octal
+// escape (at most 12 ASCII characters per UTF-16 code unit), plus framing.
+const MAX_GIT_HEADER_BYTES = 128 * 1024;
+
+function quotedPathEnd(raw: string, start: number): number {
+  for (let i = start + 1; i < raw.length; i++) {
+    if (raw[i] === '\\') i++;
+    else if (raw[i] === '"') return i + 1;
+  }
+  throw new Error('Malformed Git diff header');
+}
+
+function headerPaths(line: string): [string, string] {
+  if (line.length > MAX_GIT_HEADER_BYTES || Buffer.byteLength(line) > MAX_GIT_HEADER_BYTES) throw new Error('Git diff header exceeds supported input limits');
+  const raw = line.slice(11);
+  let separator = -1;
+  if (raw.startsWith('"')) {
+    separator = quotedPathEnd(raw, 0);
+  } else if (raw.startsWith('a/')) {
+    // Find the only possible complete quoted suffix in one pass. Do not retry
+    // a quoted-path matcher for every space in an attacker-controlled header.
+    let previousQuote = -1; let lastQuote = -1;
+    for (let i = 0; i < raw.length; i++) {
+      if (raw[i] === '\\') i++;
+      else if (raw[i] === '"') { previousQuote = lastQuote; lastQuote = i; }
+    }
+    const quotedStart = lastQuote === raw.length - 1 ? previousQuote : -1;
+    const hasLineTerminator = /[\r\u2028\u2029]/.test(raw);
+    for (let i = 2; i < raw.length; i++) {
+      const char = raw[i];
+      if (char === '\r' || char === '\u2028' || char === '\u2029') break;
+      if (char === ' ' && (i + 1 === quotedStart || (!hasLineTerminator && raw.startsWith('b/', i + 1)))) { separator = i; break; }
+    }
+  }
+  if (separator < 0 || raw[separator] !== ' ') throw new Error('Malformed Git diff header');
+  const rightStart = separator + 1;
+  if (raw[rightStart] === '"') {
+    if (quotedPathEnd(raw, rightStart) !== raw.length) throw new Error('Malformed Git diff header');
+  } else if (!raw.startsWith('b/', rightStart) || /[\r\u2028\u2029]/.test(raw.slice(rightStart))) {
+    throw new Error('Malformed Git diff header');
+  }
+  return [raw.slice(0, separator), raw.slice(rightStart)];
+}
+
 function decodePath(raw: string): string {
   if (raw.startsWith('"')) {
     if (!raw.endsWith('"')) throw new Error('Malformed quoted diff path');
@@ -8,8 +52,8 @@ function decodePath(raw: string): string {
     const body = raw.slice(1, -1);
     for (let i = 0; i < body.length; i++) {
       if (body[i] !== '\\') { const code = body.codePointAt(i)!; bytes.push(...Buffer.from(String.fromCodePoint(code))); if (code > 0xffff) i++; continue; }
-      const octal = body.slice(i + 1).match(/^[0-7]{3}/)?.[0];
-      if (octal) { bytes.push(parseInt(octal, 8)); i += 3; continue; }
+      const octal = body.slice(i + 1, i + 4);
+      if (/^[0-7]{3}$/.test(octal)) { bytes.push(parseInt(octal, 8)); i += 3; continue; }
       const escape = body[++i];
       const mapping: Record<string, number> = { n: 10, t: 9, r: 13, b: 8, f: 12, v: 11, '\\': 92, '"': 34 };
       if (escape === undefined || mapping[escape] === undefined) throw new Error('Malformed diff path escape');
@@ -43,9 +87,9 @@ export function parseDiff(text: string): DiffChange[] {
     if (line.startsWith('diff --git ')) {
       finish();
       if (changes.length >= 10000) throw new Error('Diff exceeds change count limit');
-      const paths = line.slice(11).match(/^("(?:[^"\\]|\\.)*"|a\/.*?) ("(?:[^"\\]|\\.)*"|b\/.*)$/);
-      if (!paths) throw new Error('Malformed Git diff header');
-      const p = filePath(paths[2]!); if (!p) throw new Error('Malformed Git diff path');
+      const paths = headerPaths(line);
+      const previous = filePath(paths[0]); const p = filePath(paths[1]);
+      if (!previous || !p) throw new Error('Malformed Git diff path');
       current = { path: p, status: 'modified', addedLines: 0, deletedLines: 0, ranges: [] }; continue;
     }
     if (!current) { if (line.trim()) throw new Error('Expected Git unified diff'); continue; }

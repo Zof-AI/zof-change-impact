@@ -2,7 +2,7 @@
 
 Local static change-impact analysis for TypeScript, JavaScript and Python. It identifies changed files, conventional import edges, transitive consumers and likely affected tests. It never executes analyzed source, sends telemetry, uploads code or contacts hosted services.
 
-Version 0.1.0 is prepared under the Apache-2.0 license. Use the GitHub source installation below; npm registry publication is not claimed.
+Version 0.1.1 is prepared under the Apache-2.0 license. Use the GitHub source installation below; npm registry publication is not claimed.
 
 <!-- ZOF_RELEASE_INSTALL_START -->
 ## Install from GitHub source
@@ -68,7 +68,7 @@ TypeScript's public AST recognizes static imports, re-exports, literal `require`
 
 ## Safety, configuration and limits
 
-Default exclusions include `.git`, `node_modules`, `.venv`, `venv`, `dist`, `build` and `__pycache__`. Repeat `--exclude GLOB` for directory-prefix patterns supporting `*`, `?` and `**`. An excluded changed path triggers an incomplete report. Programmatic limits default to 5,000 files, 1 MiB per source, 32 MiB total source, 8 MiB Git diff output and depth 32; configured limits have hard ceilings. Python lexical lines have a fixed 8,192-character ceiling checked before pattern matching. An oversized line stops analysis of that file and produces `PYTHON_IMPORT_SIZE_LIMIT`, `complete: false` and a full-suite fallback warning. Git subprocesses time out after 15 seconds. XML and archives are never parsed; external artifact URLs are never fetched.
+Default exclusions include `.git`, `node_modules`, `.venv`, `venv`, `dist`, `build` and `__pycache__`. Repeat `--exclude GLOB` for directory-prefix patterns supporting `*`, `?` and `**`. An excluded changed path triggers an incomplete report. Programmatic limits default to 5,000 files, 1 MiB per source, 32 MiB total source, 8 MiB Git diff output and depth 32; configured limits have hard ceilings. Python lexical lines have a fixed 8,192-character ceiling checked before pattern matching. An oversized line stops analysis of that file and produces `PYTHON_IMPORT_SIZE_LIMIT`, `complete: false` and a full-suite fallback warning. Git subprocesses time out after 15 seconds. Direct `parseDiff` input is limited to 16 MiB, each `diff --git` header to 128 KiB, and both decoded header paths to 4,096 characters. Header parsing uses deterministic scans; the header ceiling accommodates two maximum-length paths with fully octal-escaped UTF-8. Quoted and unquoted paths, spaces, escaped quotes and octal UTF-8 are supported. Malformed headers and paths stop parsing with a fixed error that omits input content. XML and archives are never parsed; external artifact URLs are never fetched.
 
 Escaping, absolute, control-character and Windows-style relative inputs are rejected. Symlinks and special files are not read. Errors and reports omit source snippets, raw logs, arbitrary environment values and Git stderr. Recognizable credentials and URL metadata are redacted. Redaction cannot identify every arbitrary secret; do not put secrets in paths or symbols. Reads are anchored to directory descriptors. File contents can still change during capture, so reports are not atomic snapshots.
 

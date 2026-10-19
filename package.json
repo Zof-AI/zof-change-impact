@@ -1,6 +1,6 @@
 {
   "name": "@zof-ai/change-impact",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Explainable offline static change-impact analysis for JavaScript, TypeScript and Python",
   "type": "module",
   "license": "Apache-2.0",
