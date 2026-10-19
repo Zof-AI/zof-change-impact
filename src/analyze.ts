@@ -7,6 +7,7 @@ import { boundedRead, redact, safePath } from './security.js';
 import type { AnalyzeOptions, ChangedSymbol, DiffChange, ImpactReport, Limitation } from './types.js';
 import { redact as redactValue } from '@zof-ai/evidence-spec';
 const source = /\.(?:[cm]?[jt]sx?|py)$/i;
+const maxPythonLineCharacters = 8192;
 export const isTestFile = (file: string): boolean => /(?:^|\/)(?:__tests__|tests?|specs?)(?:\/|$)|(?:^|\/)(?:test_[^/]+\.py|[^/]+_test\.py)$|\.(?:test|spec)\.[cm]?[jt]sx?$/i.test(file);
 function glob(pattern: string): { test: (file: string) => boolean } {
   if (typeof pattern !== 'string' || !pattern || pattern.length > 256 || pattern.includes('..') || pattern.startsWith('/') || /[\\\x00-\x1f]/.test(pattern)) throw new Error('Invalid exclusion pattern');
@@ -158,6 +159,12 @@ export async function analyzeImpact(options: AnalyzeOptions): Promise<ImpactRepo
       let triple: string | undefined;
       for (let index=0;index<lines.length;index++) {
         const line = lines[index]!;
+        // Bound lexical work before any line regex: repeated import lists can
+        // otherwise exhaust the regex engine's stack within the file-byte limit.
+        if (line.length > maxPythonLineCharacters) {
+          limit('PYTHON_IMPORT_SIZE_LIMIT','A Python lexical line exceeds 8,192 characters; file analysis requires a full-suite fallback.',file);
+          break;
+        }
         if (/'''|"""/.test(line)) { const quote = line.match(/'''|"""/)![0]; const count = line.split(quote).length - 1; if (count % 2) triple = triple === quote ? undefined : quote; limit('PYTHON_MULTILINE_STRING','Multiline strings require manual review of lexical Python analysis.',file); continue; }
         if (triple) continue;
         const clean = line.replace(/#.*/,'');
